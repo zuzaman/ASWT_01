@@ -1,0 +1,22 @@
+{% extends 'mars/base.html' %}
+
+{% block header_text %}Display the Overlap{% endblock %}
+
+{% block form_action %}/mars/result{% endblock %}
+
+{% block table %}
+	{% if overlap == 0 %}
+	The measured overlap  is {{ overlap }} Mars minutes. <br>
+	Better luck next time!
+
+	{% elif overlap <= 20 %}
+	The measured overlap  is {{ overlap }} Mars minutes. <br>
+	This is not much, please hurry up with the tests!
+
+	{% elif overlap > 20 %}
+	The measured overlap  is {{ overlap }} Mars minutes. <br>
+    Hope this gives you enough time to do your tests. :-)
+	{% endif %}
+
+
+{% endblock %}
