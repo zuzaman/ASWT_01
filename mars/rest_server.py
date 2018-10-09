@@ -5,13 +5,44 @@
 from flask import Flask, jsonify, abort, make_response, request
 from flask_restful import Api, Resource, reqparse, fields, marshal
 from mars.moon import Moon
+from flask_cors import CORS, cross_origin
 
 #
 # Define global instances, required for Flask and its REST API
 #
 app = Flask(__name__, static_url_path="")
+CORS(app)
 api = Api(app)
 
+
+def check_input(args):
+    if (args['drisehour'] is None) or (args['drisemin'] is None) or (args['ddescenthour'] is None) or (
+            args['ddescentmin'] is None):
+
+        return "Not all Deimos data correctly provided"
+
+    elif (args['prisehour'] is None) or (args['prisemin'] is None) or (args['pdescenthour'] is None) or (
+            args['pdescentmin'] is None):
+
+        return "Not all Phobos data provided"
+
+    elif ((args['drisehour'] > 24) or (args['drisehour'] < 0)) or (
+            (args['ddescenthour'] > 24) or (args['ddescenthour'] < 0)) or (
+            (args['prisehour'] > 24) or (args['prisehour'] < 0)) or (
+            (args['pdescenthour'] > 24) or (args['pdescenthour'] < 0)):
+
+        return "Mars hours may only have the values between 00 and 24"
+
+#    elif args['drisehour'] args['ddescenthour' args['prisehour'] args['pdescenthour']
+
+    elif ((args['drisemin'] > 99) or (args['drisemin'] < 0)) or (
+            (args['ddescentmin'] > 99) or (args['ddescentmin'] < 0)) or (
+            (args['prisemin'] > 99) or (args['prisemin'] < 0)) or (
+            (args['pdescentmin'] > 99) or (args['pdescentmin'] < 0)):
+        return "Mars minutes may only have the values between 00 and 99"
+
+    else:
+        return None
 
 def calculate_overlap(deimos, phobos):
     """
@@ -20,7 +51,7 @@ def calculate_overlap(deimos, phobos):
 
     :param deimos: Instance of moon class
     :param phobos: Instance of moon class
-    :return: The overlap of MArs minutes in an integer
+    :return: The overlap of Mars minutes in an integer
     """
 
     # Deimos rises before Phobos
@@ -52,8 +83,6 @@ def calculate_overlap(deimos, phobos):
 
         elif phobos.descentTime < deimos.descentTime:
             return phobos.descentTime - phobos.riseTime
-
-
 
     # Phobos rises before Deimos
     if phobos.riseTime < deimos.riseTime:
@@ -115,6 +144,7 @@ class MoonAPI(Resource):
         self.reqparse = reqparse.RequestParser()
         self.reqparse.add_argument('drisemin', type=int, required=True,
                                    help='No Deimos ascent minutes provided', location='json')
+
         self.reqparse.add_argument('drisehour', type=int, required=True,
                                    help='No Deimos ascent hours provided', location='json')
         self.reqparse.add_argument('ddescentmin', type=int, required=True,
@@ -140,8 +170,12 @@ class MoonAPI(Resource):
         :return: Integer value showing the overlap in minutes when both moons can be seen
         """
         args = self.reqparse.parse_args()
-        daimos = Moon(args['drisehour'], args['drisemin'], args['ddescenthour'], args['ddescentmin'] )
-        phobos = Moon(args['prisehour'], args['prisemin'], args['pdescenthour'], args['pdescentmin'] )
+        error = check_input(args)
+        if error is not None:
+            return {'error': error}
+
+        daimos = Moon(args['drisehour'], args['drisemin'], args['ddescenthour'], args['ddescentmin'])
+        phobos = Moon(args['prisehour'], args['prisemin'], args['pdescenthour'], args['pdescentmin'])
 
         return {'overlap': calculate_overlap(daimos, phobos)}
 
@@ -150,7 +184,6 @@ class MoonAPI(Resource):
 # This function creates the URI information for the REST API
 #
 api.add_resource(MoonAPI, '/mars/webservice/moon', endpoint='moon')
-
 
 if __name__ == '__main__':
     app.run(debug=True)
